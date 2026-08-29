@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* All layout and theming is handled by Tailwind utility classes in components. */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
