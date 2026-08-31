@@ -17,8 +17,10 @@ app.get('/api/health', (req, res) => {
 });
 
 // Routes
-const forecastRouter = require('./routes/forecast');
-app.use('/api/forecast', forecastRouter);
+const forecastRouter      = require('./routes/forecast');
+const forecastBatchRouter = require('./routes/forecastBatch');
+app.use('/api/forecast',       forecastRouter);
+app.use('/api/forecast-batch', forecastBatchRouter);
 
 // Connect to MongoDB and start server
 mongoose
