@@ -2,7 +2,7 @@
 app.py  –  Invoice Forecaster ML microservice
 Endpoints:
   GET  /health   – liveness check
-  POST /predict  – returns predicted days_late + risk_level
+  POST /predict  – returns predicted_days_late, risk_level, and reason
 """
 
 import os
@@ -36,6 +36,28 @@ def risk_level(days: float) -> str:
     if days >= 3:
         return "MEDIUM"
     return "LOW"
+
+
+def build_reason(segment: str, amount: float, avg_delay: float, level: str) -> str:
+    """Compose a short human-readable explanation of the key prediction drivers."""
+    factors = []
+
+    if avg_delay == 0:
+        factors.append("no payment history — using segment average")
+    elif avg_delay > 15:
+        factors.append("a history of significant delays")
+
+    if amount > 100_000:
+        factors.append("a large invoice amount")
+
+    if not factors:
+        # Fallback: explain purely from the segment baseline
+        return (
+            f"Flagged {level}: prediction is based on the {segment} segment baseline."
+        )
+
+    joined = " and ".join(factors)
+    return f"Flagged {level}: customer has {joined}."
 
 
 # ---------------------------------------------------------------------------
@@ -75,11 +97,14 @@ def predict():
 
     raw_pred = model.predict(df)[0]
     days = min(90.0, max(0.0, float(raw_pred)))
+    level = risk_level(days)
+    reason = build_reason(customer_segment, invoice_amount, customer_avg_past_delay, level)
 
     return jsonify(
         {
             "predicted_days_late": round(days, 2),
-            "risk_level": risk_level(days),
+            "risk_level": level,
+            "reason": reason,
         }
     )
 

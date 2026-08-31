@@ -36,6 +36,12 @@ export default function App() {
     (a, b) => RISK_ORDER[a.risk_level] - RISK_ORDER[b.risk_level]
   );
 
+  const naiveTotal = invoices.reduce((sum, i) => sum + i.invoice_amount, 0);
+  const avgDelay =
+    invoices.length > 0
+      ? invoices.reduce((sum, i) => sum + i.predicted_days_late, 0) / invoices.length
+      : 0;
+
   // ── Handlers ───────────────────────────────────────────────────────────────
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -62,7 +68,7 @@ export default function App() {
         throw new Error(body.error || `Server error ${res.status}`);
       }
 
-      const { predicted_days_late, risk_level } = await res.json();
+      const { predicted_days_late, risk_level, reason } = await res.json();
 
       setInvoices((prev) => [
         ...prev,
@@ -73,6 +79,7 @@ export default function App() {
           customer_avg_past_delay: parseFloat(form.customer_avg_past_delay),
           predicted_days_late,
           risk_level,
+          reason,
         },
       ]);
 
@@ -101,9 +108,45 @@ export default function App() {
       <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
 
         {/* ── Summary cards ── */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard label="Total Invoices" value={invoices.length} />
           <StatCard label="High Risk Count" value={highCount} accent="red" />
+
+          {/* Forecast comparison card — spans full width on mobile, one col on lg */}
+          <div className="col-span-2 lg:col-span-1 bg-zinc-900 border border-zinc-800 rounded-xl px-6 py-5">
+            <p className="text-xs text-zinc-500 uppercase tracking-widest mb-3">
+              Forecast Comparison
+            </p>
+            {invoices.length === 0 ? (
+              <p className="text-sm text-zinc-600">Submit invoices to see forecast.</p>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs text-zinc-500">Naive (on-time)</span>
+                  <span className="text-lg font-semibold tabular-nums text-white">
+                    ${naiveTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs text-zinc-500">Avg ML delay</span>
+                  <span className="text-lg font-semibold tabular-nums text-yellow-400">
+                    ~{avgDelay.toFixed(1)} days
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 leading-snug pt-1 border-t border-zinc-800">
+                  Naive assumes&nbsp;
+                  <span className="text-zinc-300 font-medium">
+                    ${naiveTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                  &nbsp;arrives on time. Reality: expect&nbsp;
+                  <span className="text-yellow-400 font-medium">
+                    ~{avgDelay.toFixed(1)} days
+                  </span>
+                  &nbsp;average delay across your invoices.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Add invoice form ── */}
@@ -224,6 +267,11 @@ export default function App() {
                         <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-semibold tracking-wide ${RISK_BADGE[inv.risk_level]}`}>
                           {inv.risk_level}
                         </span>
+                        {inv.reason && (
+                          <p className="mt-1.5 text-[11px] text-zinc-500 leading-snug max-w-[180px] mx-auto">
+                            {inv.reason}
+                          </p>
+                        )}
                       </td>
                     </tr>
                   ))}

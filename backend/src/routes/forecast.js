@@ -1,7 +1,8 @@
 /**
  * routes/forecast.js
  * POST /api/forecast  –  proxies invoice data to the ML service and
- *                        returns the predicted days_late + risk_level.
+ *                        returns predicted_days_late, risk_level, and reason.
+ *                        All fields from the Flask response are forwarded as-is.
  */
 
 const express = require('express');
